@@ -108,6 +108,26 @@
 			<artifactId>spring-boot-starter</artifactId>
 		</dependency>
 
+<!--		Zaroze pay dependacy -->
+		<dependency>
+			<groupId>com.razorpay</groupId>
+			<artifactId>razorpay-java</artifactId>
+			<version>1.4.4</version>
+		</dependency>
+
+<!--		bill receipt generation -->
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>kernel</artifactId>
+			<version>7.1.17</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>layout</artifactId>
+			<version>7.1.17</version>
+		</dependency>
+
 
 		<dependency>
 			<groupId>org.projectlombok</groupId>

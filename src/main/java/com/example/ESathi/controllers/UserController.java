@@ -1,9 +1,6 @@
 package com.example.ESathi.controllers;
 
-import com.example.ESathi.DTO.UserNeedDTO.AreaHomeWarningDTO;
-import com.example.ESathi.DTO.UserNeedDTO.HomeResponseDTO;
-import com.example.ESathi.DTO.UserNeedDTO.PendingBillDTO;
-import com.example.ESathi.DTO.UserNeedDTO.PersonalNofiticationDTO;
+import com.example.ESathi.DTO.UserNeedDTO.*;
 import com.example.ESathi.Serivces.UserService;
 import com.example.ESathi.Serivces.wedherSevices.GeminiService;
 import com.example.ESathi.Serivces.wedherSevices.WeatherService;
@@ -14,10 +11,10 @@ import com.example.ESathi.repositories.BillRepository;
 import com.example.ESathi.repositories.UserRepository;
 import org.json.JSONObject;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.time.YearMonth;
@@ -34,17 +31,20 @@ public class UserController {
     private final GeminiService geminiService;
     private final UserService userService;
     private final BillRepository billRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     public UserController(UserRepository userRepository,
                           WeatherService weatherService,
                           GeminiService geminiService,
                           UserService userService,
-                          BillRepository billRepository) {
+                          BillRepository billRepository,
+                          BCryptPasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.weatherService=weatherService;
         this.geminiService=geminiService;
         this.userService = userService;
         this.billRepository = billRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
 
@@ -117,5 +117,44 @@ public class UserController {
 //
 //        ));
 
+    }
+
+    //user Acount get user detail
+    @GetMapping("/account")
+    public ResponseEntity<User> getLoginUser(Authentication authentication)
+    {
+        String userName = authentication.getName();
+
+        //find user that at time login
+        User user = userRepository.findByEmail(userName)
+                .orElseThrow(()-> new UsernameNotFoundException("There might be some issue please Re-login"));
+
+        return ResponseEntity.ok(user);
+    }
+
+    //user can update his profile
+    @PutMapping("/update")
+    public ResponseEntity<User> updateAccount(@RequestBody UpdateUserRequestDTO updateUserRequestDTO)
+    {
+        // get user detial fro mdb
+        User user = userRepository.findByEmailAndRole(updateUserRequestDTO.getEmail() , User.Role.USER);
+
+
+        //Update only if new values are present
+        if (updateUserRequestDTO.getName() != null) {
+            user.setName(updateUserRequestDTO.getName());
+        }
+
+        if (updateUserRequestDTO.getPhone() != null) {
+            user.setPhone(updateUserRequestDTO.getPhone());
+        }
+
+        if (updateUserRequestDTO.getPassword() != null && !updateUserRequestDTO.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(updateUserRequestDTO.getPassword()));
+        }
+
+        userRepository.save(user);
+
+        return ResponseEntity.ok(user);
     }
 }

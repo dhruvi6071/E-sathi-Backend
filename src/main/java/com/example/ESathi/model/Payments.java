@@ -20,6 +20,10 @@ public class Payments {
     @ManyToOne
     @JoinColumn(name = "userId")
     private User user;
+
+    @OneToOne
+    @JoinColumn(name = "billId")
+    private Bill bill;
     private Double amountPaid;
     private LocalDateTime paidDate;
     private Methods method;
