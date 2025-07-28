@@ -17,7 +17,7 @@ public class HomeResponseDTO {
     private String weadher;
     private String risk ;
     private List<AreaHomeWarningDTO> areaHomeWarningDTOS;
-    private PersonalNofiticationDTO personalNofiticationDTO;
-    private List<PendingBillDTO> pendingBillDTO;
-    private Map<YearMonth , String>  pendingBillMesaage;
+    private double totalOneYearUnitConsumption;
+    private LastPendingBillDTO lastPendingBillDTO;
+    private  EngineerResponseForHomeDTO engineerResponseForHomeDTO ;
 }
