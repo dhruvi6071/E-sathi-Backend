@@ -19,4 +19,5 @@ public class LastPendingBillDTO {
     private Date billdate;
     private Date dueDate;
     private String message ;
+    private String status ;
 }

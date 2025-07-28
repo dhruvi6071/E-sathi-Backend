@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -14,7 +15,9 @@ import java.util.Map;
 @Builder
 public class UsagePageResponseDTO {
 
-    private Map<LocalDateTime , Double> unitWithDate ;
-    private String lastBillAvgMessage ;
+    private Map<LocalDate, Double> unitWithDate ;
     private String geminiPrediction ;
+    private double oneYearUnitAVG ;
+    private double lastMonthUnitConsume;
+    private String lastMonthBillStatus;
 }

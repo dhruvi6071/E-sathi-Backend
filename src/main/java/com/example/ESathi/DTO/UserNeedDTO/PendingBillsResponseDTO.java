@@ -7,7 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.validator.constraints.pl.NIP;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.Date;
 
 @Data
@@ -18,8 +20,9 @@ public class PendingBillsResponseDTO {
 
     private Long billId;
     private String user ;
-    private LocalDateTime billDate ;
-    private LocalDateTime dueDate ;
+    private LocalDate billDate ;
+    private YearMonth billingMonth ;
+    private LocalDate dueDate ;
     private double amount ;
     private double unit ;
     private Bill.Status status ;

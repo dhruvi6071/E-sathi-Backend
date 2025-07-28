@@ -6,7 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.Date;
 
 @Data
@@ -16,8 +18,9 @@ import java.util.Date;
 public class PaidBillResponseDTO {
     private Long billId;
     private String user;
-    private LocalDateTime billDate ;
-    private LocalDateTime paidDate ;
+    private LocalDate billDate ;
+    private YearMonth billingMonth ;
+    private LocalDate paidDate ;
     private double amount ;
     private double unit ;
     private Bill.Status status ;

@@ -7,6 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Page;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
 
 @Data
@@ -15,6 +18,13 @@ import java.util.List;
 @Builder
 public class AllBillResponseDTO {
 
-    private Page<PendingBillsResponseDTO> pendingBills ;
-    private Page<PaidBillResponseDTO> paidBill ;
+    private Long billId;
+    private String user;
+    private LocalDate billDate ;
+    private YearMonth billingMonth ;
+    private LocalDate paidDate ;
+    private LocalDate dueDate;
+    private double amount ;
+    private double unit ;
+    private Bill.Status status ;
 }

@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 ;
 import java.security.Principal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -99,6 +100,7 @@ public class UserController {
                         .dueDate(Date.from(lastMonthBill.getDueDate().atZone(ZoneId.systemDefault()).toInstant()))
                         .billdate(Date.from(lastMonthBill.getIssueDate().atZone(ZoneId.systemDefault()).toInstant()))
                         .unitCousume(lastMonthBill.getUnitConsume())
+                         .status(lastMonthBill.getStatus().toString())
                         .message("Pending Bill information:")
                         .build();
             }
@@ -111,6 +113,7 @@ public class UserController {
                         .billingMonth(paidLastMonthBill.getBillingMonth())
                         .billdate(Date.from(paidLastMonthBill.getIssueDate().atZone(ZoneId.systemDefault()).toInstant()))
                         .unitCousume(paidLastMonthBill.getUnitConsume())
+                        .status(paidLastMonthBill.getStatus().toString())
                         .message("congtrest you have no panding BIll:")
                         .build();
             }
@@ -210,20 +213,73 @@ public class UserController {
 
 
     // payment page controller methods
-    @GetMapping("/getAllBills")
-    public ResponseEntity<AllBillResponseDTO> getAllBill(@RequestParam(defaultValue = "0") int pendingPage ,
-                                                             @RequestParam(defaultValue = "3") int pendingSize,
-                                                             @RequestParam(defaultValue = "0") int paidPage,
-                                                             @RequestParam(defaultValue = "5") int paidSize,
+    @GetMapping("/bills/getAllBills")
+    public ApiResponse<Page<AllBillResponseDTO>> getAllBill(@RequestParam(defaultValue = "0") int allBillsPage ,
+                                                             @RequestParam(defaultValue = "3") int allBillsSize,
                                                              Principal principal)
     {
         String name = principal.getName() ;
         User user = userRepository.findByEmailAndRole(name , User.Role.USER);
 
         // Pageable for pending and paid separately
-        Pageable pendingPageable = PageRequest.of(pendingPage, pendingSize, Sort.by("issueDate").descending());
-        Pageable paidPageable = PageRequest.of(paidPage, paidSize, Sort.by("issueDate").descending());
+        Pageable allBillsPageable = PageRequest.of(allBillsPage, allBillsSize, Sort.by("issueDate").descending());
 
+
+        //Fetch all bilsl either pais or not
+        Page<Bill> allBillResponses= billRepository.findByUser(user , allBillsPageable);
+
+        Page<AllBillResponseDTO> allBillResponseDTO = allBillResponses.map(
+                bill->
+                {
+                    if ( bill.getStatus() == Bill.Status.PAID)
+                    {
+                        Optional<Payments> paymentOptional = paymentRepository.findByUserAndBill(user, bill);
+
+                        return new AllBillResponseDTO(
+                                bill.getBillId(),
+                                bill.getUser().getName(),
+                                bill.getIssueDate().toLocalDate(),
+                                bill.getBillingMonth(),
+                                paymentOptional.map(Payments::getPaidDate)
+                                        .map(LocalDateTime::toLocalDate)
+                                        .orElse(null), // fallback if missing
+                                null,
+                                bill.getAmountDue(),
+                                bill.getUnitConsume(),
+                                bill.getStatus()
+                        );
+                    }
+                    else
+                    {
+                       return new AllBillResponseDTO(
+                                bill.getBillId(),
+                                bill.getUser().getName(),
+                                bill.getIssueDate().toLocalDate(),
+                                bill.getBillingMonth(),
+                               null ,
+                                bill.getDueDate().toLocalDate(),
+                                bill.getAmountDue(),
+                                bill.getUnitConsume(),
+                                bill.getStatus()
+                       );
+                    }
+                }
+        );
+
+        return ApiResponse.success(allBillResponseDTO);
+    }
+
+    //get Peding bills for payment Page
+    @GetMapping("/bills/unpaidBills")
+    public ApiResponse<Page<PendingBillsResponseDTO>> getAllPendingBills(@RequestParam(defaultValue = "0") int pendingPage ,
+                                                                   @RequestParam(defaultValue = "3") int pendingSize,
+                                                                   Principal principal)
+    {
+        String name = principal.getName();
+        User user = userRepository.findByEmailAndRole(name , User.Role.USER);
+
+        //pageable for pending bills
+        Pageable pendingPageable = PageRequest.of(pendingPage , pendingSize , Sort.by("issueDate").descending());
 
         //Fetch Pending bill
         Page<Bill> pendingBillsPage = billRepository.findByUserAndStatus(user , Bill.Status.UNPAID , pendingPageable);
@@ -231,10 +287,30 @@ public class UserController {
         //set pending bill as per our requirement
         Page<PendingBillsResponseDTO> pendingDTOPage = pendingBillsPage.map(bill ->
                 new PendingBillsResponseDTO(
-                        bill.getBillId(), bill.getUser().getName(),
-                        bill.getIssueDate(), bill.getDueDate(),
-                        bill.getAmountDue(), bill.getUnitConsume(), bill.getStatus())
+                        bill.getBillId(),
+                        bill.getUser().getName(),
+                        bill.getIssueDate().toLocalDate(),
+                        bill.getBillingMonth(),
+                        bill.getDueDate().toLocalDate(),
+                        bill.getAmountDue(),
+                        bill.getUnitConsume(),
+                        bill.getStatus())
         );
+
+        return ApiResponse.success(pendingDTOPage);
+    }
+
+    //get Paid bills for payment Page
+    @GetMapping("/bills/paidBills")
+    public ApiResponse<Page<PaidBillResponseDTO>> getAllPaidBills(@RequestParam(defaultValue = "0") int paidPage ,
+                                                                   @RequestParam(defaultValue = "3") int paidSize,
+                                                                   Principal principal)
+    {
+        String name = principal.getName();
+        User user = userRepository.findByEmailAndRole(name , User.Role.USER);
+
+        //pageable for pending bills
+        Pageable paidPageable = PageRequest.of(paidPage , paidSize , Sort.by("issueDate").descending());
 
         //Fetch Paid bill
         Page<Bill> paidBillsPage = billRepository.findByUserAndStatus(user , Bill.Status.PAID, paidPageable);
@@ -246,22 +322,22 @@ public class UserController {
             return new PaidBillResponseDTO(
                     bill.getBillId(),
                     bill.getUser().getName(),
-                    bill.getIssueDate(),
-                    paymentOptional.map(Payments::getPaidDate).orElse(null), // fallback if missing
+                    bill.getIssueDate().toLocalDate(),
+                    bill.getBillingMonth(),
+                    paymentOptional.map(Payments::getPaidDate)
+                            .map(LocalDateTime::toLocalDate)
+                            .orElse(null), // fallback if missing
                     bill.getAmountDue(),
                     bill.getUnitConsume(),
                     Bill.Status.PAID
             );
         });
 
-
-        AllBillResponseDTO allBillResponseDTO = AllBillResponseDTO.builder()
-                .pendingBills(pendingDTOPage)
-                .paidBill(paidBillsDTOPage)
-                .build();
-
-        return ResponseEntity.ok(allBillResponseDTO);
+        return ApiResponse.success(paidBillsDTOPage);
     }
+
+
+
 
 
     //uasage page for user UnitConsuption and Average Consuption
@@ -274,16 +350,31 @@ public class UserController {
         User user = userRepository.findByEmailAndRole(name, User.Role.USER);
 
         //get billing date with unit for graph analysi
-        Map<LocalDateTime , Double> lastOneYearBills = userService.findUnitAndDateOfLastOneYear(user);
+        Map<LocalDate, Double> lastOneYearBills = userService.findUnitAndDateOfLastOneYear(user);
 
+        //get AVG of lat one year
+        List<Double> oneYearUnitAVGAndNumber = userService.oneyearUnitAverage(user);
+        double oneYearUnitAVG = oneYearUnitAVGAndNumber.get(1);
 
-        //get message for unsages of unit maunal analysis
-        String lastMonthBillMessage = userService.generateLastMonthUnitAvgMessage(user);
+        //get last month Unit Consumption and status
+        Bill lastMonthBill = billRepository.findTopByUserOrderByIssueDateDesc(user)
+                .orElseThrow(()-> new UsernameNotFoundException("bill not found for last bill"));
+
+        double lastMonthUnit = lastMonthBill.getUnitConsume();
+        Bill.Status status = lastMonthBill.getStatus();
 
         //gemini prediction for unit consumptions
         String geminiPrediction = userService.getGeminiPrediction(user);
 
-        return ApiResponse.success(new UsagePageResponseDTO(lastOneYearBills , lastMonthBillMessage , geminiPrediction));
+        UsagePageResponseDTO usagePageResponseDTO = UsagePageResponseDTO.builder()
+                .unitWithDate(lastOneYearBills)
+                .oneYearUnitAVG(oneYearUnitAVG)
+                .lastMonthUnitConsume(lastMonthUnit)
+                .lastMonthBillStatus(status.toString())
+                .geminiPrediction(geminiPrediction)
+                .build();
+
+        return ApiResponse.success(usagePageResponseDTO);
 
     }
 }

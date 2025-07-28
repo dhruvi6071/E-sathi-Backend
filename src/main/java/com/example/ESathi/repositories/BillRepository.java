@@ -1,5 +1,6 @@
 package com.example.ESathi.repositories;
 
+import com.example.ESathi.DTO.UserNeedDTO.AllBillResponseDTO;
 import com.example.ESathi.DTO.UserNeedDTO.LastPendingBillDTO;
 import com.example.ESathi.model.Bill;
 import com.example.ESathi.model.User;
@@ -39,4 +40,6 @@ public interface BillRepository extends JpaRepository<Bill,Long> {
 
 
     List<Bill> findByUser(User user);
+
+    Page<Bill> findByUser(User user , Pageable pageable);
 }

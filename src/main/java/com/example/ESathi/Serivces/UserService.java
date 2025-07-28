@@ -133,14 +133,14 @@ public class UserService {
     }
 
     //get all bills of last year and then retunr only unit and bill date
-    public Map<LocalDateTime , Double> findUnitAndDateOfLastOneYear(User user)
+    public Map<LocalDate , Double> findUnitAndDateOfLastOneYear(User user)
     {
         LocalDateTime fromDate = LocalDateTime.now().minusYears(1);
         List<Bill> bills = billRepository.findBillsFromLastOneYear(user.getUserID(), fromDate);
 
-        Map<LocalDateTime , Double> unitAndDate = bills.stream()
+        Map<LocalDate , Double> unitAndDate = bills.stream()
                 .collect(Collectors.toMap(
-                        Bill::getIssueDate ,
+                        bill -> bill.getIssueDate().toLocalDate() ,
                         Bill::getUnitConsume
                 ));
 

@@ -31,7 +31,7 @@ public class Bill {
     private User createBy;
     private YearMonth billingMonth;
     private Double amountDue;
-
+    private YearMonth paymentDate;
     private Double unitConsume;
 
     private Status status;
