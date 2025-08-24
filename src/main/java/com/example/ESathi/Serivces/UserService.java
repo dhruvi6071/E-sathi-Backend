@@ -2,15 +2,17 @@ package com.example.ESathi.Serivces;
 
 import com.example.ESathi.DTO.UserNeedDTO.AreaHomeWarningDTO;
 import com.example.ESathi.DTO.UserNeedDTO.PersonalNofiticationDTO;
+import com.example.ESathi.Serivces.wedherSevices.GeminiService;
 import com.example.ESathi.model.*;
 import com.example.ESathi.repositories.*;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.BitSet;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -19,17 +21,20 @@ public class UserService {
     private final OutageRepository outageRepository;
     private final NotificationRepository notificationRepository;
     private final BillRepository billRepository;
+    private  final GeminiService geminiService;
 
     public UserService(UserRepository userRepository,
                        StationRepository stationRepository,
                        OutageRepository outageRepository,
                        NotificationRepository notificationRepository,
-                       BillRepository billRepository) {
+                       BillRepository billRepository,
+                       GeminiService geminiService) {
         this.userRepository = userRepository;
         this.stationRepository = stationRepository;
         this.outageRepository = outageRepository;
         this.notificationRepository = notificationRepository;
         this.billRepository = billRepository;
+        this.geminiService = geminiService;
     }
 
 
@@ -113,4 +118,114 @@ public class UserService {
 
         return personalNofiticationDTOS;
     }
+
+    // one year Unite Consuption
+
+    public double oneYearUnitConsuption(User user)
+    {
+
+        //get one year prious date
+        LocalDateTime fromDate = LocalDateTime.now().minusYears(1);
+
+        double totalOneYearUnitConsuption = billRepository.getTotalUnitConsumptionInLastYear(user , fromDate);
+
+        return totalOneYearUnitConsuption ;
+    }
+
+    //get all bills of last year and then retunr only unit and bill date
+    public Map<LocalDate , Double> findUnitAndDateOfLastOneYear(User user)
+    {
+        LocalDateTime fromDate = LocalDateTime.now().minusYears(1);
+        List<Bill> bills = billRepository.findBillsFromLastOneYear(user.getUserID(), fromDate);
+
+        Map<LocalDate , Double> unitAndDate = bills.stream()
+                .collect(Collectors.toMap(
+                        bill -> bill.getIssueDate().toLocalDate() ,
+                        Bill::getUnitConsume
+                ));
+
+        return unitAndDate ;
+    }
+
+    // generate message for user to decribe how much unit it cosume last month based on average of total
+    public String generateLastMonthUnitAvgMessage(User user)
+    {
+        List<Double> averageUnitAndTotalBill = oneyearUnitAverage(user);
+
+        double averageYearlyUnit = averageUnitAndTotalBill.get(1);
+
+
+       Bill lastMonthBill = billRepository.findTopByUserOrderByIssueDateDesc(user)
+               .orElseThrow(()-> new UsernameNotFoundException("bill not found for last bill"));
+
+       double lastMonthUnit = lastMonthBill.getUnitConsume();
+
+
+       // Create suggestion message
+        String message;
+        if (lastMonthUnit > averageYearlyUnit) {
+            message = String.format(
+                    "⚠️ Warning: Your last month's usage (%.2f units) is higher than your 1-year average (%.2f units). Please consider reducing electricity consumption.",
+                    lastMonthUnit, averageYearlyUnit
+            );
+        } else if (lastMonthUnit < averageYearlyUnit) {
+            message = String.format(
+                    "✅ Good job! Your last month's usage (%.2f units) is lower than your 1-year average (%.2f units). Keep saving energy!",
+                    lastMonthUnit, averageYearlyUnit
+            );
+        } else {
+            message = String.format(
+                    "ℹ️ Your last month's usage (%.2f units) is equal to your 1-year average. Try to lower it to save more.",
+                    lastMonthUnit
+            );
+        }
+
+        return message ;
+    }
+
+    //gemini prediction for Usages page
+    public String getGeminiPrediction(User user)
+    {
+        List<Double> averageUnitAndTotalBill = oneyearUnitAverage(user);
+
+        double averageUnitLastOneYear = averageUnitAndTotalBill.get(1);
+        double totalBillConsiderForAVG =  averageUnitAndTotalBill.get(0);
+
+        Bill lastMonthBill = billRepository.findTopByUserOrderByIssueDateDesc(user)
+                .orElseThrow(()-> new UsernameNotFoundException("bill not found for last bill"));
+
+        double lastMonthUnit = lastMonthBill.getUnitConsume();
+        Bill.Status status = lastMonthBill.getStatus();
+
+        String message = geminiService.getConsumptionAdvice(averageUnitLastOneYear , totalBillConsiderForAVG,
+                                                            lastMonthUnit , status.toString());
+        return message ;
+    }
+
+    //genearate one year unit averate
+    public List<Double> oneyearUnitAverage(User user)
+    {
+        LocalDateTime fromDate = LocalDateTime.now().minusYears(1);
+        List<Bill> bills = billRepository.findBillsFromLastOneYear(user.getUserID(), fromDate);
+
+        double unitConsume = bills.stream()
+                .mapToDouble(Bill::getUnitConsume)
+                .sum();
+
+        int totalBills = bills.size();
+
+        double averageYearlyUnit = 0 ;
+        if(totalBills != 0 && unitConsume != 0)
+        {
+            averageYearlyUnit = unitConsume / totalBills;
+        }
+
+        List<Double> list = new ArrayList();
+
+        list.add((double)totalBills);
+        list.add(averageYearlyUnit);
+        return  list ;
+    }
+
+
 }

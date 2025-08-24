@@ -18,6 +18,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.Map;
@@ -115,6 +116,7 @@ public class PaymentService {
 
         // Step 3: Update bill
         bill.setStatus(Bill.Status.PAID);
+        bill.setPaymentDate(YearMonth.now());
         billRepository.save(bill);
 
         // Step 4: Save payment record

@@ -8,6 +8,7 @@ import com.example.ESathi.repositories.*;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.Date;
 
@@ -21,8 +22,7 @@ public class EngineerSerivce {
     private final NotificationRepository notificationRepository;
 
 
-    public EngineerSerivce(UserAreaRepository userAreaRepository,
-                           StationRepository stationRepository,
+    public EngineerSerivce(StationRepository stationRepository,
                            UserRepository userRepository,
                            OutageRepository outageRepository,
                            BillRepository billRepository,
@@ -66,7 +66,7 @@ public class EngineerSerivce {
                 .issueDate(now.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime())
                 .status(Bill.Status.UNPAID)
                 .unitConsume(dto.getUnitsUsed())
-                .billingMonth(dto.getMonth())
+                .billingMonth(YearMonth.now())
                 .amountDue(dto.getUnitsUsed()*5.50)
                 .dueDate(LocalDateTime.now().plusMonths(3))
                 .user(user)
