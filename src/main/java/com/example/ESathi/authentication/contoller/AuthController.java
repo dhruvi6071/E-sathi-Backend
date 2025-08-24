@@ -86,52 +86,59 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<User> register(@Valid @RequestBody RegisterDTO request)
     {
-        
-        User user = null;
-        if(request.getRole() == User.Role.USER) {
-            Village village = villageRepository.findByPincode(request.getPinCode())
-                    .orElseThrow(() -> new UsernameNotFoundException("Enter correct pinoced"));
+        System.out.println("inside register : ");
 
-            System.out.println(village);
+        try {
+            User user = null;
+            if (request.getRole() == User.Role.USER) {
+                Village village = villageRepository.findByPincode(request.getPinCode())
+                        .orElseThrow(() -> new UsernameNotFoundException("Enter correct pinoced"));
 
-            UserArea area = userAreaRepository.findById(village.getUserArea().getUserAreaID())
-                    .orElseThrow(() -> new UsernameNotFoundException("are id is not present"));
+                System.out.println(village);
 
-            Stations stations = stationRepository.findByName(request.getStationName());
+                UserArea area = userAreaRepository.findById(village.getUserArea().getUserAreaID())
+                        .orElseThrow(() -> new UsernameNotFoundException("are id is not present"));
+
+                Stations stations = stationRepository.findByName(request.getStationName());
 
 
-             user = User.builder()
-                    .email(request.getEmail())
-                    .phone(request.getPhone())
-                    .password(passwordEncoder.encode(request.getPassword()))
-                    .village(village)
-                    .area(area)
-                    .isActive(true)
-                    .name(request.getName())
-                    .role(User.Role.USER)
-                    .assignStation(stations)
-                    .build();
-            userRepository.save(user);
+                user = User.builder()
+                        .email(request.getEmail())
+                        .phone(request.getPhone())
+                        .password(passwordEncoder.encode(request.getPassword()))
+                        .village(village)
+                        .area(area)
+                        .isActive(true)
+                        .name(request.getName())
+                        .role(User.Role.USER)
+                        .assignStation(stations)
+                        .build();
+                userRepository.save(user);
+            }
+            if (request.getRole() == User.Role.ENGINEER) {
+                Stations stations = stationRepository.findByName(request.getStationName());
+
+
+                user = User.builder()
+                        .email(request.getEmail())
+                        .phone(request.getPhone())
+                        .password(passwordEncoder.encode(request.getPassword()))
+                        .village(null)
+                        .area(null)
+                        .isActive(true)
+                        .name(request.getName())
+                        .role(User.Role.ENGINEER)
+                        .assignStation(stations)
+                        .build();
+                userRepository.save(user);
+            }
+
+            return ResponseEntity.ok(user);
         }
-        if(request.getRole() == User.Role.ENGINEER)
+        catch (Exception e)
         {
-            Stations stations = stationRepository.findByName(request.getStationName());
-
-
-            user = User.builder()
-                    .email(request.getEmail())
-                    .phone(request.getPhone())
-                    .password(passwordEncoder.encode(request.getPassword()))
-                    .village(null)
-                    .area(null)
-                    .isActive(true)
-                    .name(request.getName())
-                    .role(User.Role.ENGINEER)
-                    .assignStation(stations)
-                    .build();
-            userRepository.save(user);
+            System.out.println(e.getMessage());
+            return ResponseEntity.ok(new User());
         }
-
-        return ResponseEntity.ok(user);
     }
 }

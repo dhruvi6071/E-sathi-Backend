@@ -168,7 +168,7 @@ public class UserController {
     }
 
     //user can update his profile
-    @PutMapping("/update")
+    @PutMapping("/account/update")
     public ApiResponse<User> updateAccount(@RequestBody UpdateUserRequestDTO updateUserRequestDTO , Authentication authentication)
     {
         String name = authentication.getName();
