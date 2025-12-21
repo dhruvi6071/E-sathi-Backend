@@ -6,30 +6,26 @@ import com.example.ESathi.authentication.DTO.RegisterDTO;
 import com.example.ESathi.authentication.Services.JwtTokenSerivce;
 import com.example.ESathi.model.Stations;
 import com.example.ESathi.model.User;
-import com.example.ESathi.model.UserArea;
 import com.example.ESathi.model.Village;
 import com.example.ESathi.repositories.StationRepository;
-import com.example.ESathi.repositories.UserAreaRepository;
 import com.example.ESathi.repositories.UserRepository;
 import com.example.ESathi.repositories.VillageRepository;
+import com.example.ESathi.utils.ApiResponse;
+import com.example.ESathi.utils.customeExeptions.ResourceNotFoundException;
 import jakarta.validation.Valid;
+import org.bouncycastle.asn1.x509.UserNotice;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.swing.*;
-import java.awt.geom.Area;
-import java.security.Security;
 
 @RestController
 @RequestMapping("/auth")
@@ -45,26 +41,25 @@ public class AuthController {
 
     private final PasswordEncoder passwordEncoder;
     private final VillageRepository villageRepository;
-    private final UserAreaRepository userAreaRepository;
     private final StationRepository stationRepository ;
 
     public AuthController(JwtTokenSerivce jwtService,
                           UserRepository userRepository,
                           PasswordEncoder passwordEncoder,
                           VillageRepository villageRepository,
-                          UserAreaRepository userAreaRepository, StationRepository stationRepository) {
+                           StationRepository stationRepository) {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.villageRepository=villageRepository;
-        this.userAreaRepository=userAreaRepository;
         this.stationRepository = stationRepository;
     }
 
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponseDTO> login(@RequestBody LoginRequestDTo request)
+    public ApiResponse<AuthResponseDTO> login(@RequestBody LoginRequestDTo request)
     {
+        //Stores user’s authentication info.    //Validates the credentials with Spring Security
         Authentication authentication=authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -72,34 +67,35 @@ public class AuthController {
                 )
         );
 
-        User user = (User) userRepository.findByEmail(request.getEmail())
-                .orElseThrow(()->{throw new UsernameNotFoundException("email not register");
-                });
+        String mail = request.getEmail();
+        User user =  userRepository.findByEmail(mail)
+                .orElseThrow(()-> new ResourceNotFoundException("User not present with name" + mail));
 
+        //set authenticate use in context and making it accessible globally within the current thread
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         String accessToken = jwtService.generateAccessToken(authentication);
         String refreshToken= jwtService.generateRefreshToken(authentication);
-        return ResponseEntity.ok(new AuthResponseDTO(accessToken,refreshToken ,user.getEmail(),user.getRole().name()));
+        return ApiResponse.success(new AuthResponseDTO(accessToken,refreshToken ,user.getEmail(),user.getRole().name()));
     }
 
     @PostMapping("/register")
-    public ResponseEntity<User> register(@Valid @RequestBody RegisterDTO request)
+    public ApiResponse<User> register(@Valid @RequestBody RegisterDTO request)
     {
         System.out.println("inside register : ");
 
         try {
             User user = null;
-            if (request.getRole() == User.Role.USER) {
-                Village village = villageRepository.findByPincode(request.getPinCode())
-                        .orElseThrow(() -> new UsernameNotFoundException("Enter correct pinoced"));
+            if (User.Role.fromString(String.valueOf(request.getRole())) == User.Role.USER) {
+                String pin = request.getPinCode() ;
+                Village village = villageRepository.findByPincode(pin)
+                        .orElseThrow(() -> new ResourceNotFoundException("Enter correct pin code, this is not valid" + pin ));
 
-                System.out.println(village);
+//                System.out.println(village);
 
-                UserArea area = userAreaRepository.findById(village.getUserArea().getUserAreaID())
-                        .orElseThrow(() -> new UsernameNotFoundException("are id is not present"));
-
-                Stations stations = stationRepository.findByName(request.getStationName());
+                Long stationId =  village.getStations().getSationID() ;
+                Stations stations = stationRepository.findById(stationId)
+                        .orElseThrow(() -> new ResourceNotFoundException("station not Found with this Id" + stationId));
 
 
                 user = User.builder()
@@ -107,7 +103,6 @@ public class AuthController {
                         .phone(request.getPhone())
                         .password(passwordEncoder.encode(request.getPassword()))
                         .village(village)
-                        .area(area)
                         .isActive(true)
                         .name(request.getName())
                         .role(User.Role.USER)
@@ -115,8 +110,16 @@ public class AuthController {
                         .build();
                 userRepository.save(user);
             }
-            if (request.getRole() == User.Role.ENGINEER) {
-                Stations stations = stationRepository.findByName(request.getStationName());
+            if (User.Role.fromString(String.valueOf(request.getRole())) == User.Role.ENGINEER) {
+                String pin = request.getPinCode() ;
+                Village village = villageRepository.findByPincode(pin)
+                        .orElseThrow(() -> new ResourceNotFoundException("Enter correct pin code, this is not valid" + pin ));
+
+//                System.out.println(village);
+
+                Long stationId =  village.getStations().getSationID() ;
+                Stations stations = stationRepository.findById(stationId)
+                        .orElseThrow(() -> new ResourceNotFoundException("station not Found with this Id" + stationId));
 
 
                 user = User.builder()
@@ -124,7 +127,6 @@ public class AuthController {
                         .phone(request.getPhone())
                         .password(passwordEncoder.encode(request.getPassword()))
                         .village(null)
-                        .area(null)
                         .isActive(true)
                         .name(request.getName())
                         .role(User.Role.ENGINEER)
@@ -133,12 +135,12 @@ public class AuthController {
                 userRepository.save(user);
             }
 
-            return ResponseEntity.ok(user);
+            System.out.println("registration success" +  request.getEmail());
+            return ApiResponse.success(user);
         }
         catch (Exception e)
         {
-            System.out.println(e.getMessage());
-            return ResponseEntity.ok(new User());
+            throw  new ResourceNotFoundException("Some Problem During Registration " + e.getMessage());
         }
     }
 }

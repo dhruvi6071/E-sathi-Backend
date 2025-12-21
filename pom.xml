@@ -108,7 +108,7 @@
 			<artifactId>spring-boot-starter</artifactId>
 		</dependency>
 
-<!--		Zaroze pay dependacy -->
+<!--		Razore pay dependacy -->
 		<dependency>
 			<groupId>com.razorpay</groupId>
 			<artifactId>razorpay-java</artifactId>

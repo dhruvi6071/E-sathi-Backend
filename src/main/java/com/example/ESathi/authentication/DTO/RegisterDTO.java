@@ -16,5 +16,4 @@ public class RegisterDTO {
     private String pinCode;
     private String password;
     private User.Role role;
-    private String stationName;
 }

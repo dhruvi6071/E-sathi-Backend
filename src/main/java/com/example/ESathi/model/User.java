@@ -48,12 +48,10 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
-    @ManyToOne
-    @JoinColumn(name = "areaID")
-    private UserArea area;
+
 
     @ManyToOne
-    @JoinColumn(name = "stationID" , nullable = false)
+    @JoinColumn(name = "stationid")
     private Stations assignStation;
 
     @Column(nullable = false)
@@ -95,6 +93,15 @@ public class User implements UserDetails {
         USER,
         ENGINEER,
         ADMIN;
+
+        public static Role fromString(String role) {
+            if (role == null) return null;
+            try {
+                return Role.valueOf(role.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return null; // or throw custom exception
+            }
+        }
     }
 
 }

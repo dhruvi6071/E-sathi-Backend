@@ -18,6 +18,7 @@ public interface UserRepository extends JpaRepository<User,Long>
 
     User findByRoleAndAssignStation(User.Role role, Stations station);
 
+
 }
 
 

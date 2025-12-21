@@ -24,17 +24,20 @@ public class GeminiService {
 
     public JSONObject analyzeWeatherWithGemini(JSONObject weatherData, String areaName) {
         String prompt = """
-                    You are a weather risk predictor for rural electric outages.
+                    You are a weather-based outage risk predictor for rural electricity areas.
                     
-                    I will provide you weather data in JSON. You must respond ONLY in raw JSON format with the following structure:
+                    I will provide weather data in JSON format. You must return ONLY a raw JSON object with exactly this structure:
                     
                     {
                       "area": "<Area Name>",
-                      "weather": "<Short weather description like: Overcast clouds>",
-                      "risk": "<Risk level like Low/Medium/High with brief reason>"
+                      "weather": "<Very short weather summary (2–4 words)>",
+                      "risk": "<Low/Medium/High - with a brief reason in 4–7 words>"
                     }
                     
-                    DO NOT return anything else. Do NOT add summary, explanation or extra lines. Just return valid JSON.
+                    RULES:
+                    - Output must be valid JSON only.
+                    - No extra text, no explanation, no sentences outside JSON.
+                    - Keep all fields brief and to the point.
                     
                     Here is the weather data:
                     """ + weatherData.toString();
@@ -86,22 +89,25 @@ public class GeminiService {
     public String getConsumptionAdvice(double averageUnit, double totalBills, double lastMonthUnit, String lastMonthStatus) {
         // Construct prompt for Gemini
         String prompt = """
-        Analyze the user's electricity usage with the following data:
-
-        Average monthly unit consumption over the past year: %s units
-        Last month's unit consumption: %s units
-        Total number of bills available: %s units
-        Last bill payment status: %s
-
-        Please calculate the percentage increase or decrease in last month's usage compared to the average, and include that in the response.
-
-        Then generate a short and helpful electricity consumption message. Keep it:
-        - Under 100 words
-        - Clear, actionable, and user-friendly
-        - Mention if last month’s usage increased or decreased compared to average
-        - Include advice to improve consumption habits
-        - Mention the unpaid status politely and responsibly
-        """.formatted(
+                Analyze the user's electricity usage using the following data:
+                
+                Average monthly consumption: %s units
+                Last month's consumption: %s units
+                Total bills available: %s
+                Last bill payment status: %s
+                
+                TASK:
+                1. Calculate the percentage increase or decrease in last month's usage compared to the yearly average.
+                2. Generate a short electricity consumption message (max 3–4 lines, under 70 words).
+                
+                MESSAGE RULES:
+                - Must clearly state whether usage increased or decreased.
+                - Must be simple, friendly, and actionable.
+                - Include one helpful tip to improve electricity habits.
+                - If the bill is unpaid, mention it politely in one short line.
+                - DO NOT add headers, titles, sections, or long explanations.
+                - Output only the final short message, nothing else.
+                """.formatted(
                 averageUnit,
                 lastMonthUnit,
                 totalBills,

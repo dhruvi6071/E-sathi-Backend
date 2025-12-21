@@ -7,6 +7,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,8 @@ public class JwtTokenSerivce {
     @Autowired
     private TokenRepository tokenRepository;
 
-    private final String SECRET_KEY = "afafasfafafasfasfasfafacasdasfasxASFACASDFACASDFASFASFDAFASFASDAADSCSDFADCVSGCFVADXCcadwavfsfarvf";
+    @Value("${jwt.secret_key}")
+    private String SECRET_KEY ;
 
     public String generateAccessToken(Authentication authentication) {
 
@@ -39,7 +41,7 @@ public class JwtTokenSerivce {
         });
 
 
-        Date now = new Date(); //return current date
+        Date now = new Date();
         Date expiryDate = new Date(now.getTime()+ 1000 * 60 * 60 * 10);
 
         Map<String, Object> claims = new HashMap<>();
@@ -56,7 +58,7 @@ public class JwtTokenSerivce {
         Token token1 = new Token();
         token1.setToken(token);
         token1.setTokenType("ACCESS");
-        token1.setRevoked(false);
+        token1.setRevoked(false); //Revoked state that Token is valid or not
         token1.setExpiryDate(expiryDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
         token1.setUserName(user.getEmail());
         tokenRepository.save(token1);
@@ -88,6 +90,7 @@ public class JwtTokenSerivce {
         existingToken.stream()
                 .filter(t->"REFRESH".equals(t.getTokenType())&& !t.isRevoked())
                 .forEach(t->{
+                    // set Revoked Ture means Tokens are not valid from now
                         t.setRevoked(true);
                         tokenRepository.save(t);
                 });

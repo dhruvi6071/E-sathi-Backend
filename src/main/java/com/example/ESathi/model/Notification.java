@@ -42,6 +42,15 @@ public class Notification {
         WARNING,
         INFO,
         BILL_DUE,
-        BILL
+        BILL ;
+
+        public static Type fromString(String type) {
+            if (type == null) return null;
+            try {
+                return Notification.Type.valueOf(type.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return null; // or throw custom exception
+            }
+        }
     }
 }

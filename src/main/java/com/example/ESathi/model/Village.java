@@ -22,6 +22,6 @@ public class Village {
     private String Disctrit;
 
     @ManyToOne
-    @JoinColumn(name = "areaID")
-    private UserArea userArea;
+    @JoinColumn(name = "sationID")
+    private Stations stations;
 }

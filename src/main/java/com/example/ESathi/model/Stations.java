@@ -17,11 +17,4 @@ public class Stations {
 
     private String name ;
 
-    @ManyToOne
-    @JoinColumn(name = "areaID")
-    private UserArea userArea;
-
-    @ManyToOne
-    @JoinColumn(name = "villageID")
-    private Village village;
 }
