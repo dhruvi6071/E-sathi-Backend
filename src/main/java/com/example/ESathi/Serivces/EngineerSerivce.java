@@ -83,7 +83,7 @@ public class EngineerSerivce {
 
         Notification notification = Notification.builder()
                 .title(dto.getTitle())
-                .type(Notification.Type.valueOf(dto.getType()))
+                .type(Notification.Type.fromString(dto.getType()))
                 .message(dto.getMessage())
                 .createdBy(existingEngineer)
                 .user(user)

@@ -43,7 +43,7 @@ public class generateBillWarnings {
                         .mapToDouble(Bill::getAmountDue)
                         .sum();
 
-                String message = "⚠ You have " + monthsPending + " month(s) of pending bills. "
+                String message = "You have " + monthsPending + " month(s) of pending bills. "
                         + "Total due: ₹" + totalAmount;
 
                 Notification notification = new Notification();

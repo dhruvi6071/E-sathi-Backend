@@ -13,8 +13,8 @@ import java.util.Map;
 @AllArgsConstructor
 public class HomeResponseDTO {
 
-    private String are;
-    private String weadher;
+    private String area;
+    private String weather;
     private String risk ;
     private List<AreaHomeWarningDTO> areaHomeWarningDTOS;
     private double totalOneYearUnitConsumption;

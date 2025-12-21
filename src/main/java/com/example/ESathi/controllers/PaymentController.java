@@ -9,6 +9,8 @@ import com.example.ESathi.model.User;
 import com.example.ESathi.repositories.BillRepository;
 import com.example.ESathi.repositories.PaymentRepository;
 import com.example.ESathi.repositories.UserRepository;
+import com.example.ESathi.utils.ApiResponse;
+import com.example.ESathi.utils.customeExeptions.ResourceNotFoundException;
 import com.razorpay.RazorpayException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,18 +42,18 @@ public class PaymentController {
     }
 
     @PostMapping("/payment/create/{billId}")
-    public ResponseEntity<Map<String, Object>> createPaymentOrder(
+    public ApiResponse<Map<String, Object>> createPaymentOrder(
             @PathVariable Long billId,
             Principal principal
     ) throws RazorpayException {
         String email = principal.getName();
         Map<String, Object> response = paymentService.createPaymentOrder(billId, email);
-        return ResponseEntity.ok(response);
+        return ApiResponse.success(response);
     }
 
     //verifying payment
     @PostMapping("/payment/verify/{billId}")
-    public ResponseEntity<?> verifyPayment(
+    public ApiResponse<?> verifyPayment(
             @PathVariable Long billId,
             @RequestBody RazorpayVerifyDTO verifyDTO,
             Principal principal
@@ -67,23 +69,26 @@ public class PaymentController {
                     principal.getName()
             );
 
-            return ResponseEntity.ok("Payment verified and recorded.");
+            return ApiResponse.success("Payment verified and recorded.");
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Payment verification failed: " + e.getMessage());
+            return ApiResponse.error(
+                    "Payment Verification faild" + e.getMessage(),
+                    HttpStatus.BAD_REQUEST
+            );
         }
     }
 
-    //genearate bill for successPayment
+    //genearate bill-Receipt for successPayment
     @GetMapping("/bill-receipt/{billId}")
-    public ResponseEntity<BillReceiptResponseDTO> getBillReceiptData(@PathVariable Long billId, Principal principal) {
+    public ApiResponse<BillReceiptResponseDTO> getBillReceiptData(@PathVariable Long billId, Principal principal) {
         User user = userRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found" + principal.getName()));
 
         Bill bill = billRepository.findById(billId)
-                .orElseThrow(() -> new RuntimeException("Bill not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Bill not found" + billId));
 
         Payments payment = paymentRepository.findByUserAndBill(user, bill)
-                .orElseThrow(() -> new RuntimeException("Payment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
 
 
         BillReceiptResponseDTO billReceiptResponseDTO = BillReceiptResponseDTO.builder()
@@ -99,6 +104,6 @@ public class PaymentController {
                 .userId(payment.getUser().getUserID())
                 .build();
 
-        return ResponseEntity.ok(billReceiptResponseDTO);
+        return ApiResponse.success(billReceiptResponseDTO);
     }
 }

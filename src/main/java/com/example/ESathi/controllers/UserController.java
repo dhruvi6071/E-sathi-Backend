@@ -7,8 +7,12 @@ import com.example.ESathi.Serivces.wedherSevices.WeatherService;
 import com.example.ESathi.model.*;
 import com.example.ESathi.repositories.BillRepository;
 import com.example.ESathi.repositories.PaymentRepository;
+import com.example.ESathi.repositories.StationRepository;
 import com.example.ESathi.repositories.UserRepository;
 import com.example.ESathi.utils.ApiResponse;
+import com.example.ESathi.utils.customeExeptions.BaseException;
+import com.example.ESathi.utils.customeExeptions.NameNotMatchException;
+import com.example.ESathi.utils.customeExeptions.ResourceNotFoundException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +49,7 @@ public class UserController {
     private final BillRepository billRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final PaymentRepository paymentRepository;
+    private final StationRepository stationRepository ;
 
     public UserController(UserRepository userRepository,
                           WeatherService weatherService,
@@ -52,7 +57,8 @@ public class UserController {
                           UserService userService,
                           BillRepository billRepository,
                           BCryptPasswordEncoder passwordEncoder,
-                          PaymentRepository paymentRepository) {
+                          PaymentRepository paymentRepository,
+                          StationRepository stationRepository) {
 
         this.userRepository = userRepository;
         this.weatherService=weatherService;
@@ -61,6 +67,7 @@ public class UserController {
         this.billRepository = billRepository;
         this.passwordEncoder = passwordEncoder;
         this.paymentRepository = paymentRepository;
+        this.stationRepository = stationRepository;
     }
 
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
@@ -70,13 +77,13 @@ public class UserController {
     public ResponseEntity<HomeResponseDTO> getAllHomeDetail(Principal principal)
     {
 
-//        //Weadher based prediction
+        //Weather based prediction
         String username= principal.getName();
 
         User user= userRepository.findByEmail(username)
-                .orElseThrow(()->new UsernameNotFoundException("user for this email is not valid"));
-
+                .orElseThrow(()->new ResourceNotFoundException("user for this email is not valid"));
         Village village= user.getVillage();
+        Long stationId=user.getVillage().getStations().getSationID();
         String villageName= village.getName();
         String pincode = village.getPincode();
 
@@ -85,7 +92,7 @@ public class UserController {
 
         //fetc Area notification
         List<AreaHomeWarningDTO> areaWarnings = userService.findAreaWarningMesage(user);
-        System.out.println(areaWarnings);
+//        System.out.println(areaWarnings);
 
         //fetch last pending bill
 
@@ -123,8 +130,16 @@ public class UserController {
         double oneYearUnitConsumption = userService.oneYearUnitConsuption(user);
 
             // Fetch Enginner Detail to perticular Are User
-        Stations stations = user.getAssignStation();
-        User engineer = userRepository.findByRoleAndAssignStation(User.Role.ENGINEER , stations);
+        Stations station = stationRepository.findById(stationId).orElseThrow(
+                ()-> new NoSuchElementException("Station not fond")
+        );
+        System.out.println("----- station -----");
+        System.out.println(station);
+        User engineer = userRepository.findByRoleAndAssignStation(User.Role.ENGINEER, station);
+        if (engineer == null) {
+            throw new ResourceNotFoundException("No engineer found");
+        }
+
         EngineerResponseForHomeDTO engineerResponseForHomeDTO = EngineerResponseForHomeDTO.builder()
                 .name(engineer.getName())
                 .phone(engineer.getPhone())
@@ -162,7 +177,7 @@ public class UserController {
 
         //find user that at time login
         User user = userRepository.findByEmail(userName)
-                .orElseThrow(()-> new UsernameNotFoundException("There might be some issue please Re-login"));
+                .orElseThrow(()-> new ResourceNotFoundException("There might be some issue please Re-login" + userName));
 
         return ResponseEntity.ok(user);
     }
@@ -172,6 +187,10 @@ public class UserController {
     public ApiResponse<User> updateAccount(@RequestBody UpdateUserRequestDTO updateUserRequestDTO , Authentication authentication)
     {
         String name = authentication.getName();
+        if(name == null)
+        {
+            throw new BaseException("User not in Context") ;
+        }
 //        System.out.println(name);
 
         try {
@@ -179,7 +198,7 @@ public class UserController {
 
             if(!name.equals(updateUserRequestDTO.getEmail()))
             {
-                throw  new Exception("user not match");
+                throw new NameNotMatchException("user not match");
             }
 
             // get user detial from db
@@ -205,9 +224,7 @@ public class UserController {
         }
         catch (Exception e)
         {
-            System.out.println(e.getMessage());
-           return  ApiResponse.error(e.getMessage() , HttpStatus.BAD_REQUEST);
-
+            throw new NameNotMatchException("Error with Matching user: " + e.getMessage()) ;
         }
     }
 
@@ -219,7 +236,18 @@ public class UserController {
                                                              Principal principal)
     {
         String name = principal.getName() ;
+        if(name == null)
+        {
+            throw new BaseException("User not in Context") ;
+        }
+
         User user = userRepository.findByEmailAndRole(name , User.Role.USER);
+        System.out.println("--- user --");
+        System.out.println(user);
+        if(user == null)
+        {
+            throw new ResourceNotFoundException("User not find in Data :" + name) ;
+        }
 
         // Pageable for pending and paid separately
         Pageable allBillsPageable = PageRequest.of(allBillsPage, allBillsSize, Sort.by("issueDate").descending());
@@ -276,7 +304,16 @@ public class UserController {
                                                                    Principal principal)
     {
         String name = principal.getName();
+        if(name == null)
+        {
+            throw new BaseException("User not in Context") ;
+        }
         User user = userRepository.findByEmailAndRole(name , User.Role.USER);
+        if(user == null)
+        {
+            throw new ResourceNotFoundException("User not find in Data :" + name) ;
+        }
+
 
         //pageable for pending bills
         Pageable pendingPageable = PageRequest.of(pendingPage , pendingSize , Sort.by("issueDate").descending());
@@ -307,7 +344,15 @@ public class UserController {
                                                                    Principal principal)
     {
         String name = principal.getName();
+        if(name == null)
+        {
+            throw new BaseException("User not in Context") ;
+        }
         User user = userRepository.findByEmailAndRole(name , User.Role.USER);
+        if(user == null)
+        {
+            throw new ResourceNotFoundException("User not find in Data :" + name) ;
+        }
 
         //pageable for pending bills
         Pageable paidPageable = PageRequest.of(paidPage , paidSize , Sort.by("issueDate").descending());
@@ -346,8 +391,16 @@ public class UserController {
     public ApiResponse<UsagePageResponseDTO> getUsagePageDetail(Principal principal)
     {
         String name = principal.getName();
+        if(name == null)
+        {
+            throw new BaseException("User not in Context") ;
+        }
 
         User user = userRepository.findByEmailAndRole(name, User.Role.USER);
+        if(user == null)
+        {
+            throw new ResourceNotFoundException("User not find in Data :" + name) ;
+        }
 
         //get billing date with unit for graph analysi
         Map<LocalDate, Double> lastOneYearBills = userService.findUnitAndDateOfLastOneYear(user);

@@ -44,7 +44,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/engineer/**").hasRole("ENGINEER")
                         .requestMatchers("/Admin/**").hasRole("ADMIN")
-                        .requestMatchers("/user/**").permitAll() //hasAnyRole("ADMIN","USER")
+                        .requestMatchers("/user/**").hasRole("USER") //hasAnyRole("ADMIN","USER")
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
@@ -72,7 +72,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource()
     {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173")); //  Frontend origin
+        config.setAllowedOrigins(List.of("http://127.0.0.1:5500/")); //  Frontend origin
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true); // Allow cookies/auth headers

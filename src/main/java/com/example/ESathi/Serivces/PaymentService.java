@@ -6,9 +6,12 @@ import com.example.ESathi.model.User;
 import com.example.ESathi.repositories.BillRepository;
 import com.example.ESathi.repositories.PaymentRepository;
 import com.example.ESathi.repositories.UserRepository;
+import com.example.ESathi.utils.customeExeptions.BaseException;
+import com.example.ESathi.utils.customeExeptions.ResourceNotFoundException;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
+import com.razorpay.Utils;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -64,7 +67,8 @@ public class PaymentService {
 
         // Prepare Razorpay order
         double actualAmount = bill.getAmountDue();
-        int amountInPaisa = (int) Math.round(actualAmount * 100 );
+        long amountInPaisa = Math.round(actualAmount * 100 );
+        System.out.println(amountInPaisa);
         JSONObject orderRequest = new JSONObject();
         orderRequest.put("amount", amountInPaisa); // in paise
         orderRequest.put("currency", "INR");
@@ -74,13 +78,15 @@ public class PaymentService {
         System.out.println("Bill Amount: " + bill.getAmountDue());
         System.out.println("Amount in paisa (sent to Razorpay): " + amountInPaisa);
 
-
+        // make order to RazorPay
         Order order = razorpay.orders.create(orderRequest);
+//        System.out.println("Created Razorpay Order: " + order.toString());
 
         // Return response payload
         Map<String, Object> response = new HashMap<>();
         response.put("orderId", order.get("id"));
-        response.put("amount", bill.getAmountDue());
+        response.put("amount", order.get("amount"));
+        response.put("currency", order.get("currency"));
         response.put("userName", user.getName());
         response.put("userEmail", user.getEmail());
         response.put("unitsUsed", bill.getUnitConsume());
@@ -100,26 +106,29 @@ public class PaymentService {
                                      String transactionRef,
                                      String email) throws Exception {
 
-        // Step 1: Verify signature
-        String payload = razorpayOrderId + "|" + razorpayPaymentId;
-        String generatedSignature = hmacSHA256(payload, razorpayKeySecret);
+        //  Verify signature using Razorpay util
+        JSONObject options = new JSONObject();
+        options.put("razorpay_order_id", razorpayOrderId);
+        options.put("razorpay_payment_id", razorpayPaymentId);
+        options.put("razorpay_signature", razorpaySignature);
 
-        if (!generatedSignature.equals(razorpaySignature)) {
-            throw new Exception("Invalid payment signature!");
+        boolean isValid = Utils.verifyPaymentSignature(options, razorpayKeySecret);
+        if (!isValid) {
+            throw new BaseException("Invalid payment signature!");
         }
 
-        // Step 2: Fetch user and bill
+        // Fetch user and bill
         User user = userRepository.findByEmail(email)
-                .orElseThrow(()-> new UsernameNotFoundException("user not found when payment verify"));
+                .orElseThrow(()-> new ResourceNotFoundException("user not found when payment verify"));
         Bill bill = billRepository.findById(billId)
-                .orElseThrow(() -> new RuntimeException("Bill not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Bill not found"));
 
-        // Step 3: Update bill
+        // Update bill
         bill.setStatus(Bill.Status.PAID);
         bill.setPaymentDate(YearMonth.now());
         billRepository.save(bill);
 
-        // Step 4: Save payment record
+        // Save payment record
         Payments payment = new Payments();
         payment.setUser(user);
         payment.setBill(bill);
@@ -129,13 +138,5 @@ public class PaymentService {
         payment.setTransationalRef(transactionRef);
 
         paymentRepository.save(payment);
-    }
-
-    private String hmacSHA256(String data, String secret) throws Exception {
-        Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-        SecretKeySpec secret_key = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
-        sha256_HMAC.init(secret_key);
-        byte[] hash = sha256_HMAC.doFinal(data.getBytes(StandardCharsets.UTF_8));
-        return HexFormat.of().formatHex(hash);
     }
 }

@@ -2,6 +2,7 @@ package com.example.ESathi.authentication.Services;
 
 import com.example.ESathi.model.User;
 import com.example.ESathi.repositories.UserRepository;
+import com.example.ESathi.utils.customeExeptions.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -16,9 +17,9 @@ public class CustomUserDetailsService implements UserDetailsService {
 
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String email) throws ResourceNotFoundException {
         return userRepository.findByEmail(email)
-                .orElseThrow(()-> new UsernameNotFoundException("user not found"));
+                .orElseThrow(()-> new ResourceNotFoundException("user not found with email" + email));
 
 
     }

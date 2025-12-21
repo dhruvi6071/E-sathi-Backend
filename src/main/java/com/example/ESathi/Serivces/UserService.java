@@ -165,17 +165,17 @@ public class UserService {
         String message;
         if (lastMonthUnit > averageYearlyUnit) {
             message = String.format(
-                    "⚠️ Warning: Your last month's usage (%.2f units) is higher than your 1-year average (%.2f units). Please consider reducing electricity consumption.",
+                    "Warning: Your last month's usage (%.2f units) is higher than your 1-year average (%.2f units). Please consider reducing electricity consumption.",
                     lastMonthUnit, averageYearlyUnit
             );
         } else if (lastMonthUnit < averageYearlyUnit) {
             message = String.format(
-                    "✅ Good job! Your last month's usage (%.2f units) is lower than your 1-year average (%.2f units). Keep saving energy!",
+                    "Good job! Your last month's usage (%.2f units) is lower than your 1-year average (%.2f units). Keep saving energy!",
                     lastMonthUnit, averageYearlyUnit
             );
         } else {
             message = String.format(
-                    "ℹ️ Your last month's usage (%.2f units) is equal to your 1-year average. Try to lower it to save more.",
+                    "️ Your last month's usage (%.2f units) is equal to your 1-year average. Try to lower it to save more.",
                     lastMonthUnit
             );
         }
@@ -202,7 +202,7 @@ public class UserService {
         return message ;
     }
 
-    //genearate one year unit averate
+    //genearate one year unit average
     public List<Double> oneyearUnitAverage(User user)
     {
         LocalDateTime fromDate = LocalDateTime.now().minusYears(1);
